@@ -10,6 +10,8 @@ export default function Index() {
   const [amount, setAmount] = useState('');
   const [steamId, setSteamId] = useState('');
   const [activeSection, setActiveSection] = useState<'home' | 'topup' | 'support'>('home');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const popularAmounts = [100, 300, 500, 1000, 2000, 5000];
 
@@ -62,12 +64,42 @@ export default function Index() {
     }
   ];
 
-  const handleTopup = () => {
+  const handleTopup = async () => {
     if (!steamId || !amount) {
       alert('Пожалуйста, заполните все поля');
       return;
     }
-    alert(`Пополнение ${amount}₽ для Steam ID: ${steamId}. В реальном приложении здесь будет переход на оплату.`);
+
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch('https://functions.poehali.dev/47345500-d6ec-4d76-8efe-cc4bef43113d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          steam_id: steamId,
+          amount: parseInt(amount),
+          payment_method: selectedPaymentMethod
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`Платеж создан!\nID транзакции: ${data.transaction_id}\nСтатус: ${data.status}\n\nВ реальной системе здесь будет переход на страницу оплаты.`);
+        setSteamId('');
+        setAmount('');
+      } else {
+        alert(`Ошибка: ${data.error || 'Не удалось создать платеж'}`);
+      }
+    } catch (error) {
+      alert('Ошибка соединения с сервером');
+      console.error('Payment error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -238,8 +270,13 @@ export default function Index() {
                     {paymentMethods.map((method) => (
                       <Button
                         key={method.id}
-                        variant="outline"
-                        className="h-auto py-4 justify-start hover:bg-primary hover:text-primary-foreground transition-colors"
+                        variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
+                        onClick={() => setSelectedPaymentMethod(method.id)}
+                        className={`h-auto py-4 justify-start transition-colors ${
+                          selectedPaymentMethod === method.id 
+                            ? 'gradient-purple border-0' 
+                            : 'hover:bg-primary hover:text-primary-foreground'
+                        }`}
                       >
                         <Icon name={method.icon as any} size={20} className="mr-2" />
                         {method.name}
@@ -258,9 +295,19 @@ export default function Index() {
                   <Button 
                     className="w-full gradient-purple border-0 text-lg py-6 hover:opacity-90 transition-opacity"
                     onClick={handleTopup}
+                    disabled={isProcessing}
                   >
-                    <Icon name="CreditCard" size={20} className="mr-2" />
-                    Перейти к оплате
+                    {isProcessing ? (
+                      <>
+                        <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
+                        Обработка...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="CreditCard" size={20} className="mr-2" />
+                        Перейти к оплате
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>

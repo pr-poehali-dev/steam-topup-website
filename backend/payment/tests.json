@@ -1,0 +1,34 @@
+{
+  "tests": [
+    {
+      "name": "Create new payment",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "steam_id": "76561198012345678",
+        "amount": 1000,
+        "payment_method": "card"
+      },
+      "expectedStatus": 201
+    },
+    {
+      "name": "Get all payments",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Reject invalid payment - missing steam_id",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "amount": 500
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
